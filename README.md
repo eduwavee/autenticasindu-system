@@ -4,6 +4,10 @@ Sistema de gestión para **Auténticas** (@autenticas_ind_), tienda de ropa feme
 
 Es una **PWA**: se instala en el celular como una app y funciona **100 % sin internet**. No tiene backend: los datos viven en el dispositivo y se respaldan con un archivo de backup.
 
+[![CI y publicación](https://github.com/eduwavee/autenticasindu-system/actions/workflows/ci.yml/badge.svg)](https://github.com/eduwavee/autenticasindu-system/actions/workflows/ci.yml)
+
+**App publicada:** https://eduwavee.github.io/autenticasindu-system/
+
 Hecho por **Sync Solutions** · Eduardo Velazques.
 
 ---
@@ -54,6 +58,12 @@ Hecho por **Sync Solutions** · Eduardo Velazques.
     <td align="center" width="25%"><img src="docs/capturas/15-catalogo.png" alt="Catálogo" width="200"><br><sub>Catálogo</sub></td>
     <td align="center" width="25%"><img src="docs/capturas/16-ajustes.png" alt="Ajustes y backup" width="200"><br><sub>Ajustes y backup</sub></td>
   </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/capturas/21-carrito.png" alt="Carrito con precio especial e ítem libre" width="200"><br><sub>Carrito: precio especial e ítem libre</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/22-en-espera.png" alt="Ventas en espera" width="200"><br><sub>Ventas en espera</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/19-devoluciones.png" alt="Devoluciones y anulaciones" width="200"><br><sub>Devoluciones y anulaciones</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/20-ajuste.png" alt="Ajustar stock con motivo" width="200"><br><sub>Ajustar stock con motivo</sub></td>
+  </tr>
 </table>
 
 ### En la compu
@@ -78,16 +88,27 @@ La misma app se adapta a pantallas grandes con una barra lateral.
 - Comprobante por WhatsApp.
 - Valida el stock antes de registrar: si no alcanza, avisa y no toca nada.
 
+### Carrito del mostrador
+Para que toda venta del local pase por la app y la dueña tenga el control de lo que se vende:
+- **No se pierde**: si se cierra la app o se recarga a mitad de una venta, el carrito sigue ahí.
+- **Ventas en espera**: se pausa una venta (por ejemplo, la clienta está en el probador), se atiende otra y se retoma después. Puede haber varias a la vez, con nombre; también se ven en Inicio.
+- **Precio especial por prenda** solo para esa venta: el comprobante muestra el precio de lista tachado y el que se cobró.
+- **Ítem libre** para lo que no está en el stock: un arreglo, una bolsa de regalo, una prenda sin cargar.
+- **Vaciar** el carrito y **contador** de prendas en el botón Vender.
+
 ### Cambios, devoluciones y anulaciones
 - **Devolver** prendas sueltas de una venta: el descuento o recargo se prorratea, primero baja lo que la clienta debía y lo ya pagado vuelve como plata (por el medio que elijas) o como saldo a favor.
 - **Cambiar** prendas por otras: la devolución y la venta nueva se registran juntas. Si la prenda nueva sale menos, la diferencia se devuelve o queda a favor.
 - **Anular** es devolver todo lo que queda. Los cobros originales no se borran: el reintegro se anota el día en que se hace, así las cajas y cierres de días anteriores no cambian.
 - **Corregir** una venta sin anularla: clienta, canal, nota, entrega y medio de pago (también se corrige en la caja).
+- **Motivo** opcional en cada devolución, cambio o anulación: no le quedó el talle, no le gustó, falla, error al cobrar u otro.
+- **Devoluciones y anulaciones** (desde Ventas o Más): todo lo que volvió en el período, cuánto valía, cuánta plata salió de la caja, cuánto quedó a favor, por motivo, qué prendas y talles vuelven más, y el detalle de cada una.
 
 ### Stock
 - Prendas con foto, categoría, precio, costo y margen; variantes de talle × color con stock propio.
 - Filtros: stock bajo, agotadas, **quietas** (sin ventas hace X días) y ocultas. Valor del inventario a costo y a precio de venta.
-- **Entró mercadería**: suma stock por talle, actualiza el costo y anota el gasto en un solo paso. Guarda historial de ingresos.
+- **Entró mercadería**: suma stock por talle, actualiza el costo y anota el gasto en un solo paso. Guarda historial de ingresos, y un ingreso se puede **cancelar** (compra devuelta al proveedor o cargada por error): sale del stock y se borra el gasto.
+- **Ajustar stock con motivo**: falla, robo o pérdida, uso personal, corrección por conteo. Queda registrado con su costo; los cambios hechos a mano en la ficha de la prenda también quedan registrados.
 - **Actualizar precios en bloque**: subir o bajar por %, para todas o por categoría, con redondeo ($100, $500, $1.000) y vista previa. La última actualización se puede deshacer.
 - **Etiquetas con QR** para imprimir o guardar en PDF. El QR abre la app y suma la prenda al carrito.
 
@@ -108,6 +129,7 @@ La misma app se adapta a pantallas grandes con una barra lateral.
 - Comparación con el período anterior (por ejemplo, este mes contra los mismos días del mes pasado).
 - Períodos: hoy, 7 días, este mes, mes anterior o un rango de fechas a elección.
 - Ventas por día u hora, más vendidas, por medio de pago, categoría, canal y talle.
+- Mercadería que salió sin venderse (fallas, pérdidas, uso), valuada a costo y por motivo.
 - Prendas quietas y cuánta plata hay invertida en ellas.
 
 ### Inicio, catálogo y ajustes
@@ -177,7 +199,7 @@ npm run dev        # http://localhost:5173
 | `npm run preview` | Sirve el build de `dist/` para probarlo |
 | `npm test` | Corre los tests de la capa de datos |
 | `npm run test:watch` | Tests en modo watch |
-| `npm run lint` | Lint con oxlint |
+| `npm run lint` | Lint con oxlint (los avisos cuentan como error) |
 
 La cámara (escaneo de QR) y la instalación como app necesitan **HTTPS**; en `localhost` funcionan, desde otra IP de la red no.
 
@@ -193,7 +215,11 @@ La cámara (escaneo de QR) y la instalación como app necesitan **HTTPS**; en `l
 
 ## Deploy
 
-`npm run build` genera `dist/`, una carpeta 100 % estática. Se puede publicar gratis en Netlify, Vercel, GitHub Pages, Cloudflare Pages o Render.
+La app se publica sola en **GitHub Pages**: https://eduwavee.github.io/autenticasindu-system/
+
+El workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre en cada push y pull request: instala, pasa el lint, los tests y el build. Si todo pasa y es la rama `main`, publica `dist/` en GitHub Pages. Si algo falla, no se publica y GitHub avisa.
+
+`npm run build` genera `dist/`, una carpeta 100 % estática, así que también se puede publicar en Netlify, Vercel, Cloudflare Pages o Render.
 
 - Comando de build: `npm run build` · Carpeta a publicar: `dist`.
 - Necesita **HTTPS** para instalarse como app (todos los anteriores lo dan).
@@ -208,6 +234,7 @@ Cada deploy nuevo actualiza la app sola la próxima vez que se abre con internet
 ## Estructura del proyecto
 
 ```
+.github/workflows/ci.yml  Lint, tests, build y publicación en GitHub Pages
 src/
 ├── main.jsx            Punto de entrada; pide al navegador guardado persistente
 ├── App.jsx             Rutas, bloqueo con PIN y modo discreto
@@ -218,7 +245,7 @@ src/
 ├── utils.js            Formato de montos y fechas, períodos, WhatsApp, imágenes, QR
 ├── hooks.js            useHoy, useFotoUrl, productos con stock, última venta por prenda
 ├── store.js            useConfig y contexto del carrito
-├── CartProvider.jsx    Estado del carrito (incluye el cambio en curso)
+├── CartProvider.jsx    Carrito: se guarda en el dispositivo, ventas en espera, precio especial, ítem libre
 ├── ui.jsx              Componentes base: etiqueta, perchero, hoja inferior, toast…
 ├── layout.jsx          Barra superior, navegación inferior y lateral
 ├── seed.js             Datos de ejemplo
@@ -234,7 +261,7 @@ Documentación de producto y diseño: [`PRODUCT.md`](PRODUCT.md) y [`DESIGN.md`]
 
 ## Modelo de datos
 
-Base IndexedDB `autenticas`, esquema **versión 2** (`src/db.js`).
+Base IndexedDB `autenticas`, esquema **versión 3** (`src/db.js`).
 
 | Tabla | Contenido |
 |---|---|
@@ -244,11 +271,13 @@ Base IndexedDB `autenticas`, esquema **versión 2** (`src/db.js`).
 | `ventas` | Ítems, totales, pagos, saldo, lo cobrado después a cuenta, lo devuelto |
 | `cobros` | Movimientos de plata con fecha: venta, pago a cuenta, seña y reintegro (negativo) |
 | `creditos` | Saldo a favor por clienta: suma al cargar, resta al usar |
-| `devoluciones` | Devoluciones, cambios y anulaciones con su fecha, valor y costo |
+| `devoluciones` | Devoluciones, cambios y anulaciones con su fecha, motivo, valor y costo |
 | `gastos` | Gastos por categoría y medio de pago |
 | `cierres` | Cierres de caja con el arqueo |
 | `fondos` | Fondo de caja inicial por día |
-| `ingresos` | Historial de entradas de mercadería |
+| `ingresos` | Historial de entradas de mercadería (con marca si se cancelaron) |
+| `ajustes` | Ajustes de stock: prenda, talle, cantidad (+/−), costo, motivo y nota |
+| `esperas` | Ventas en espera del mostrador |
 | `config` | Ajustes de la tienda (clave → valor) |
 
 Reglas importantes:
@@ -256,17 +285,18 @@ Reglas importantes:
 - **La caja se arma con `cobros`**: cada movimiento de plata tiene su fecha y nunca se borra. Las devoluciones de plata son cobros negativos con fecha del día en que se hacen.
 - **Lo vendido** en un período = ventas del período − devoluciones del período. Las anulaciones hechas antes de la versión 2 no tienen devolución registrada y se excluyen de los reportes.
 - Pagar con **saldo a favor** o con el crédito de un **cambio** no genera cobro: no entra plata a la caja.
+- Las líneas del carrito con **precio especial** guardan también `precioLista`; los **ítems libres** no tienen variante y no tocan el stock.
 - Al abrir la app, la **migración v1 → v2** pasa el fondo de caja a su tabla, reconstruye lo cobrado a cuenta por venta, saca las fotos copiadas dentro de las ventas y convierte las fotos a Blob.
 
 ### Formato de backup
 
 ```json
-{ "app": "autenticas", "version": 2, "exportado": "2026-10-02T14:00:00.000Z", "tablas": { "productos": [], "ventas": [] } }
+{ "app": "autenticas", "version": 3, "exportado": "2026-10-02T14:00:00.000Z", "tablas": { "productos": [], "ventas": [] } }
 ```
 
 - Las fotos van como dataURL dentro del JSON.
 - Restaurar **reemplaza todos los datos** del dispositivo.
-- Los backups versión 1 se migran al restaurar; los de una versión más nueva que la app se rechazan con un aviso para actualizar.
+- Los backups de versiones anteriores (1 y 2) se migran al restaurar; los de una versión más nueva que la app se rechazan con un aviso para actualizar.
 
 ---
 
@@ -284,7 +314,11 @@ Cubren la lógica de `src/db.js` contra una IndexedDB simulada:
 - Cambios: más caro, más barato (reintegro del excedente) y cambio fallido que deja todo intacto.
 - Saldo a favor: pago de más, uso en ventas, compensación de deuda y devolución.
 - Corrección de venta, entrada de mercadería, precios en bloque con redondeo.
+- Motivos de devolución y anulación, ajustes de stock (sin stock negativo), cancelación de ingresos (y su bloqueo si esas prendas ya se vendieron).
+- Ítems libres y precio especial en el carrito.
 - Backup de ida y vuelta, rechazo de versiones nuevas, migración de backups v1 y de una base v1 instalada.
+
+Además de los tests, cada pantalla se probó de punta a punta en Chrome (tamaño celular y escritorio) con los datos de ejemplo.
 
 ---
 
@@ -294,4 +328,5 @@ Cubren la lógica de `src/db.js` contra una IndexedDB simulada:
 - **El backup depende de la usuaria.** La app lo recuerda cada 7 días, pero no puede hacerlo sola.
 - **El PIN es una traba para curiosos, no un cifrado**: los datos no se encriptan en el dispositivo.
 - **El escáner de QR dentro de la app funciona en Chrome Android.** En iPhone el QR se lee con la cámara del sistema y abre el link en Safari.
-- El bundle principal pesa ~545 kB (Vite avisa por pasar los 500 kB). La app queda cacheada para uso offline, así que solo afecta la primera carga.
+- Las ventas en espera no reservan stock: al retomarlas se vuelve a controlar.
+- Las etiquetas QR llevan la dirección desde donde se imprimen: hay que imprimirlas desde la app publicada (la app avisa si estás en una dirección local).
