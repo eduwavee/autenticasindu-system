@@ -10,6 +10,7 @@ Hecho por **Sync Solutions** · Eduardo Velazques.
 
 ## Índice
 
+- [Capturas](#capturas)
 - [Qué hace](#qué-hace)
 - [Dónde se guardan los datos](#dónde-se-guardan-los-datos)
 - [Guía rápida para la tienda](#guía-rápida-para-la-tienda)
@@ -19,6 +20,50 @@ Hecho por **Sync Solutions** · Eduardo Velazques.
 - [Modelo de datos](#modelo-de-datos)
 - [Tests](#tests)
 - [Limitaciones conocidas](#limitaciones-conocidas)
+
+---
+
+## Capturas
+
+> Tomadas con los datos de ejemplo que trae la app (prendas, clientas y ventas ilustrativas).
+
+### En el celular
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/capturas/01-inicio.png" alt="Inicio" width="200"><br><sub>Inicio</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/02-vender.png" alt="Vender" width="200"><br><sub>Vender</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/03-perchero.png" alt="Elegir talle en el perchero" width="200"><br><sub>Elegir talle en el perchero</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/04-cobrar.png" alt="Cobrar" width="200"><br><sub>Cobrar</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/capturas/05-comprobante.png" alt="Comprobante" width="200"><br><sub>Comprobante</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/06-devolucion.png" alt="Devolución" width="200"><br><sub>Devolución</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/07-stock.png" alt="Stock" width="200"><br><sub>Stock</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/08-precios.png" alt="Precios en bloque" width="200"><br><sub>Precios en bloque</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/capturas/09-ingreso.png" alt="Entró mercadería" width="200"><br><sub>Entró mercadería</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/10-etiquetas.png" alt="Etiquetas con QR" width="200"><br><sub>Etiquetas con QR</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/11-clientas.png" alt="Clientas" width="200"><br><sub>Clientas</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/12-clienta.png" alt="Ficha de clienta" width="200"><br><sub>Ficha de clienta</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/capturas/13-caja.png" alt="Caja y arqueo" width="200"><br><sub>Caja y arqueo</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/14-reportes.png" alt="Reportes" width="200"><br><sub>Reportes</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/15-catalogo.png" alt="Catálogo" width="200"><br><sub>Catálogo</sub></td>
+    <td align="center" width="25%"><img src="docs/capturas/16-ajustes.png" alt="Ajustes y backup" width="200"><br><sub>Ajustes y backup</sub></td>
+  </tr>
+</table>
+
+### En la compu
+
+La misma app se adapta a pantallas grandes con una barra lateral.
+
+<p align="center">
+  <img src="docs/capturas/17-escritorio-inicio.png" alt="Inicio en pantalla de escritorio" width="49%">
+  <img src="docs/capturas/18-escritorio-vender.png" alt="Vender en pantalla de escritorio" width="49%">
+</p>
 
 ---
 
@@ -180,6 +225,7 @@ src/
 ├── styles.css          Estilos y tokens de diseño
 ├── pages/              Una pantalla por archivo
 └── __tests__/          Tests de la capa de datos
+docs/capturas/          Capturas de pantalla del README
 ```
 
 Documentación de producto y diseño: [`PRODUCT.md`](PRODUCT.md) y [`DESIGN.md`](DESIGN.md).
