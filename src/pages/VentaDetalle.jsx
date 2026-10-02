@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Check, MessageCircle, ShoppingBag, Ban, PackageCheck, Undo2, Repeat, Pencil, Minus, Plus, X, UserPlus } from 'lucide-react'
-import { db, anularVenta, devolverItems, editarVenta, calcDevolucion, METODOS, METODO_LABEL, METODOS_SIN_CAJA, CANALES } from '../db'
+import { db, anularVenta, devolverItems, editarVenta, calcDevolucion, METODOS, METODO_LABEL, METODOS_SIN_CAJA, CANALES, MOTIVOS_DEVOLUCION, MOTIVO_DEV_LABEL } from '../db'
 import { useCart, useConfig } from '../store'
 import { Page } from '../layout'
 import { Tag, Sheet, Confirm, useToast } from '../ui'
@@ -31,6 +31,18 @@ function DestinoPicker({ value, onChange, clienta, monto }) {
   )
 }
 
+/** Por qué vuelve: sirve para ver en Devoluciones qué falla más (talles, calidad…). */
+function MotivoPicker({ value, onChange, titulo = '¿Por qué?' }) {
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <span className="label">{titulo} <span className="subtle">(opcional)</span></span>
+      <div className="chips" style={{ margin: 0, padding: 0, flexWrap: 'wrap' }} role="group" aria-label="Motivo">
+        {MOTIVOS_DEVOLUCION.map((m) => <button key={m.id} className="chip" aria-pressed={value === m.id} onClick={() => onChange(value === m.id ? null : m.id)}>{m.label}</button>)}
+      </div>
+    </div>
+  )
+}
+
 const aDestino = (d) => (d === 'afavor' ? { tipo: 'afavor' } : { tipo: 'reintegro', metodo: d })
 
 /** Elegir prendas que vuelven (para devolver o para cambiar). */
@@ -41,19 +53,20 @@ function DevolucionSheet({ v, clienta, modo, onClose }) {
   const [cant, setCant] = useState(() => Object.fromEntries(restantes(v).map((l) => [l.idx, v.items.length === 1 ? l.cantidad : 0])))
   const [destino, setDestino] = useState(() => (clienta && modo === 'devolver' ? 'afavor' : medioOriginal(v)))
   const [busy, setBusy] = useState(false)
+  const [motivo, setMotivo] = useState(null)
   const lineas = Object.entries(cant).map(([idx, cantidad]) => ({ idx: Number(idx), cantidad })).filter((l) => l.cantidad > 0)
   const dev = calcDevolucion(v, lineas)
 
   const confirmar = async () => {
     if (modo === 'cambiar') {
-      cart.setCambio({ ventaId: v.id, lineas, items: dev.items, resto: dev.resto, clientaId: v.clientaId || null })
+      cart.setCambio({ ventaId: v.id, lineas, items: dev.items, resto: dev.resto, clientaId: v.clientaId || null, motivo })
       toast('Elegí las prendas que se lleva')
       nav('/vender')
       return
     }
     setBusy(true)
     try {
-      await devolverItems(v.id, lineas, aDestino(destino))
+      await devolverItems(v.id, lineas, aDestino(destino), motivo)
       toast('Devolución registrada')
       onClose()
     } catch (e) { toast(e.message, 'error'); setBusy(false) }
@@ -85,6 +98,7 @@ function DevolucionSheet({ v, clienta, modo, onClose }) {
             <div className="row-between grand"><span>{modo === 'cambiar' ? 'Crédito para el cambio' : 'A devolver'}</span><b>{money(dev.resto)}</b></div>
           </div>
         )}
+        {dev.items.length > 0 && <MotivoPicker value={motivo} onChange={setMotivo} titulo={modo === 'cambiar' ? '¿Por qué la cambia?' : '¿Por qué la devuelve?'} />}
         {modo === 'devolver' && dev.resto > 0 && <DestinoPicker value={destino} onChange={setDestino} clienta={clienta} monto={dev.resto} />}
         <button className="btn btn-primary btn-lg btn-block" disabled={!dev.items.length || busy || (destino === 'afavor' && !clienta && dev.resto > 0)} onClick={confirmar}>
           {modo === 'cambiar' ? <><Repeat /> Elegir lo que se lleva</> : <><Undo2 /> Registrar devolución</>}
@@ -160,6 +174,7 @@ export default function VentaDetalle() {
   const toast = useToast()
   const [sheet, setSheet] = useState(null) // 'devolver' | 'cambiar' | 'editar' | 'anular'
   const [destinoAnular, setDestinoAnular] = useState(null)
+  const [motivoAnular, setMotivoAnular] = useState(null)
   const data = useLiveQuery(async () => {
     const v = await db.ventas.get(Number(id))
     if (!v) return { v: null }
@@ -199,7 +214,7 @@ export default function VentaDetalle() {
               <div key={k} className="row-between" style={{ alignItems: 'flex-start' }}>
                 <span className="grow">
                   <b style={{ fontWeight: 600, textDecoration: i.devuelto >= i.cantidad ? 'line-through' : undefined }}>{i.nombre}</b><br />
-                  <span className="subtle">Talle {i.talle}{i.color ? ` · ${i.color}` : ''} · ×{i.cantidad}</span>
+                  <span className="subtle">{i.libre ? 'Ítem libre' : `Talle ${i.talle}${i.color ? ` · ${i.color}` : ''}`} · ×{i.cantidad}{i.precioLista ? <> · <s>{money(i.precioLista)}</s> {money(i.precio)} c/u</> : ''}</span>
                   {i.devuelto > 0 && <> <span className="badge badge-muted">devuelta{i.devuelto < i.cantidad ? ` ×${i.devuelto}` : ''}</span></>}
                 </span>
                 <b className="money">{money(i.precio * i.cantidad)}</b>
@@ -236,6 +251,7 @@ export default function VentaDetalle() {
                 <div key={d.id} className="list-item">
                   <span className="grow" style={{ minWidth: 0 }}>
                     <span className="title">{d.tipo === 'cambio' ? 'Cambio' : d.tipo === 'anulacion' ? 'Anulación' : 'Devolución'} · {fechaRelativa(d.fecha)}</span><br />
+                    {d.motivo && <><span className="subtle">Motivo: {MOTIVO_DEV_LABEL[d.motivo] || d.motivo}</span><br /></>}
                     <span className="subtle">{d.items.map((i) => `${i.nombre} (${i.talle}) ×${i.cantidad}`).join(', ')}</span><br />
                     <span className="subtle">
                       {d.aSaldo > 0 && `Bajó ${money(d.aSaldo)} de deuda. `}
@@ -280,8 +296,9 @@ export default function VentaDetalle() {
         open={sheet === 'anular'} onClose={() => setSheet(null)} danger confirmLabel="Anular venta" title="¿Anular esta venta?"
         text={`Las prendas vuelven al stock${v.saldo > 0 ? ' y se cancela lo que debía' : ''}. Lo cobrado en su día queda registrado ese día.`}
         disabled={devAnular.resto > 0 && destinoA === 'afavor' && !clienta}
-        onConfirm={async () => { await anularVenta(v.id, aDestino(destinoA)); toast('Venta anulada') }}
+        onConfirm={async () => { await anularVenta(v.id, aDestino(destinoA), motivoAnular); toast('Venta anulada') }}
       >
+        <MotivoPicker value={motivoAnular} onChange={setMotivoAnular} titulo="¿Por qué se anula?" />
         {devAnular.resto > 0 && <DestinoPicker value={destinoA} onChange={setDestinoAnular} clienta={clienta} monto={devAnular.resto} />}
       </Confirm>
     </Page>

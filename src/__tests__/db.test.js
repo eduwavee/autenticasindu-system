@@ -3,6 +3,7 @@ import {
   db, registrarVenta, anularVenta, devolverItems, cobrarDeuda, compensarDeudaConSaldo, saldoAFavor,
   cargarSaldoAFavor, devolverSaldoAFavor, editarVenta, registrarIngreso, actualizarPrecios, nuevoPrecio,
   calcDevolucion, exportarBackup, importarBackup, validarBackup, migrarTablasV1, deudaPorClienta,
+  ajustarStock, anularIngreso, BACKUP_VERSION,
 } from '../db'
 
 async function prenda({ precio = 10000, costo = 4000, stock = { S: 3, M: 3 } } = {}) {
@@ -242,7 +243,7 @@ describe('backup', () => {
     const p = await prenda()
     await registrarVenta(venta([item(p, 'S')], [{ metodo: 'efectivo', monto: 10000 }]))
     const data = JSON.parse(JSON.stringify(await exportarBackup()))
-    expect(data.version).toBe(2)
+    expect(data.version).toBe(BACKUP_VERSION)
     await db.ventas.clear()
     await importarBackup(data)
     expect(await db.ventas.count()).toBe(1)
@@ -288,9 +289,65 @@ describe('migración de la base instalada', () => {
     vieja.close()
 
     await db.open()
-    expect(db.verno).toBe(2)
+    expect(db.verno).toBe(3)
     expect((await db.ventas.toArray())[0].cuenta).toBe(70)
     expect(await db.fondos.get('2026-10-01')).toEqual({ dia: '2026-10-01', monto: 12000 })
     expect((await db.config.get('onboarded')).value).toBe(true)
+  })
+})
+
+describe('motivos, ajustes y cancelación de ingresos', () => {
+  it('guarda el motivo de devoluciones y anulaciones', async () => {
+    const p = await prenda()
+    const id = await registrarVenta(venta([item(p, 'S'), item(p, 'M')], [{ metodo: 'efectivo', monto: 20000 }]))
+    await devolverItems(id, [{ idx: 0, cantidad: 1 }], { tipo: 'reintegro', metodo: 'efectivo' }, 'talle')
+    await anularVenta(id, { tipo: 'reintegro', metodo: 'efectivo' }, 'gusto')
+    const devs = await db.devoluciones.toArray()
+    expect(devs.map((d) => [d.tipo, d.motivo])).toEqual([['devolucion', 'talle'], ['anulacion', 'gusto']])
+    expect((await db.ventas.get(id)).motivoAnulacion).toBe('gusto')
+  })
+
+  it('ajuste de stock con motivo y costo; no deja stock negativo', async () => {
+    const p = await prenda({ stock: { S: 3, M: 3 } })
+    await ajustarStock({ items: [{ varianteId: p.vars.S, delta: -2 }], motivo: 'falla' })
+    expect(await stock(p.vars.S)).toBe(1)
+    expect((await db.ajustes.toArray())[0]).toMatchObject({ delta: -2, costo: 4000, motivo: 'falla', talle: 'S' })
+    await expect(ajustarStock({ items: [{ varianteId: p.vars.S, delta: -5 }], motivo: 'perdida' })).rejects.toThrow(/no se pueden sacar/)
+    expect(await stock(p.vars.S)).toBe(1)
+  })
+
+  it('cancelar un ingreso saca el stock y borra el gasto', async () => {
+    const p = await prenda()
+    const id = await registrarIngreso({ items: [{ productoId: p.productoId, varianteId: p.vars.S, cantidad: 4, costo: 4000 }], gastoMetodo: 'efectivo' })
+    expect(await stock(p.vars.S)).toBe(7)
+    await anularIngreso(id)
+    expect(await stock(p.vars.S)).toBe(3)
+    expect(await db.gastos.count()).toBe(0)
+    expect((await db.ingresos.get(id)).anulado).toBeTruthy()
+    await expect(anularIngreso(id)).rejects.toThrow(/cancelado/)
+  })
+
+  it('no cancela un ingreso si esas prendas ya se vendieron', async () => {
+    const p = await prenda({ stock: { S: 0, M: 0 } })
+    const id = await registrarIngreso({ items: [{ productoId: p.productoId, varianteId: p.vars.S, cantidad: 2, costo: 4000 }] })
+    await registrarVenta(venta([item(p, 'S')], [{ metodo: 'efectivo', monto: 10000 }]))
+    await expect(anularIngreso(id)).rejects.toThrow(/ya se vendieron/)
+    expect(await stock(p.vars.S)).toBe(1)
+  })
+})
+
+describe('carrito del mostrador', () => {
+  it('vende ítems libres (sin stock) y guarda el precio de lista cuando hubo precio especial', async () => {
+    const p = await prenda()
+    const libre = { productoId: null, varianteId: null, nombre: 'Arreglo de ruedo', talle: '—', color: '', precio: 3000, costo: 0, categoria: 'Otros', cantidad: 1, libre: true }
+    const especial = { ...item(p, 'S', 1, 8000), precioLista: 10000 }
+    const id = await registrarVenta(venta([especial, libre], [{ metodo: 'efectivo', monto: 11000 }]))
+    const v = await db.ventas.get(id)
+    expect(v.total).toBe(11000)
+    expect(v.items[0]).toMatchObject({ precio: 8000, precioLista: 10000 })
+    expect(v.items[1]).toMatchObject({ libre: true, varianteId: null })
+    expect(await stock(p.vars.S)).toBe(2)
+    await devolverItems(id, [{ idx: 1, cantidad: 1 }], { tipo: 'reintegro', metodo: 'efectivo' })
+    expect(await stock(p.vars.S)).toBe(2)
   })
 })

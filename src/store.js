@@ -14,3 +14,6 @@ export function useConfig() {
 
 export const CartCtx = createContext(null)
 export const useCart = () => useContext(CartCtx)
+
+/** Clave de cada línea del carrito: la variante, o un id propio para los ítems libres (sin stock). */
+export const claveLinea = (i) => i.key || (i.varianteId ? `v${i.varianteId}` : `l${i.libreId}`)

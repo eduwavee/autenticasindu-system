@@ -543,3 +543,11 @@ button.hanger[aria-pressed='true'] svg { animation: swing 480ms var(--ease); tra
   .print-area { margin: 0; padding: 0; border: 0; gap: 4mm; }
   .hangtag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- Carrito: contador y ventas en espera ---------- */
+.nav-badge { position: absolute; top: -4px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #fff; color: var(--rose-800); font-size: 11px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--rose-700); }
+.sell-disc { position: relative; }
+.rail-sell { position: relative; }
+.rail-sell .nav-badge { position: static; margin-left: auto; background: var(--rose-700); color: #fff; box-shadow: none; }
+.espera-bar { width: 100%; border: 0; font: inherit; cursor: pointer; align-items: center; }
+.espera-bar .link-btn { font-weight: 700; }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Download, Store } from 'lucide-react'
+import { Download, Store, Undo2 } from 'lucide-react'
 import { db, METODO_LABEL, CANALES } from '../db'
 import { Page } from '../layout'
 import { Empty } from '../ui'
@@ -50,7 +50,10 @@ export default function Ventas() {
   }
 
   return (
-    <Page title="Ventas" back="/mas" actions={<button className="icon-btn" onClick={exportarCSV} aria-label="Exportar a Excel (CSV)" title="Exportar CSV"><Download /></button>}>
+    <Page title="Ventas" back="/mas" actions={<>
+      <Link className="icon-btn" to="/ventas/devoluciones" aria-label="Devoluciones y anulaciones" title="Devoluciones y anulaciones"><Undo2 /></Link>
+      <button className="icon-btn" onClick={exportarCSV} aria-label="Exportar a Excel (CSV)" title="Exportar CSV"><Download /></button>
+    </>}>
       <div className="stack">
         <div className="seg" role="group" aria-label="Período">
           {PERIODOS.map(([id, l]) => <button key={id} aria-pressed={per === id} onClick={() => setPer(id)}>{l}</button>)}

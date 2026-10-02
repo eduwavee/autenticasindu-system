@@ -57,6 +57,9 @@ export default function Etiquetas() {
   return (
     <Page title="Etiquetas con QR" back="/stock">
       <div className="stack-lg no-print">
+        {/^(localhost|127\.|192\.168\.|10\.|\[::1\])/.test(location.hostname) && (
+          <p className="alert alert-warn">Estás en una dirección local ({location.host}): los QR impresos desde acá no van a abrir la app en otro celular. Imprimí las etiquetas desde la app publicada.</p>
+        )}
         <p className="muted">Elegí cuántas etiquetas imprimir de cada talle. Al escanear el QR con el celular se abre la app y la prenda va directo al carrito.</p>
         {!data.length ? <Empty title="No hay prendas" text="Cargá prendas para imprimir sus etiquetas." /> : (
           <>

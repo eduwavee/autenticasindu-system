@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Search, TrendingUp, PackagePlus, QrCode } from 'lucide-react'
+import { Plus, Search, TrendingUp, PackagePlus, QrCode, ClipboardCheck } from 'lucide-react'
 import { db } from '../db'
 import { useConfig } from '../store'
 import { useAhora, useUltimaVentaPorProducto } from '../hooks'
@@ -63,6 +63,7 @@ export default function Stock() {
         )}
         <div className="row wrap">
           <Link to="/stock/ingreso" className="btn btn-soft btn-sm"><PackagePlus /> Entró mercadería</Link>
+          <Link to="/stock/ajuste" className="btn btn-soft btn-sm"><ClipboardCheck /> Ajustar stock</Link>
           <Link to="/stock/precios" className="btn btn-soft btn-sm"><TrendingUp /> Actualizar precios</Link>
           <Link to="/stock/etiquetas" className="btn btn-soft btn-sm"><QrCode /> Etiquetas</Link>
         </div>

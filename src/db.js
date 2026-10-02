@@ -30,8 +30,13 @@ db.version(2).stores({
   if (m.fondos.length) await tx.table('fondos').bulkPut(m.fondos)
 })
 
+db.version(3).stores({
+  ajustes: '++id, fecha, productoId, motivo',
+  esperas: '++id, creado',
+})
+
 /** Versión del formato de backup que genera esta app. */
-export const BACKUP_VERSION = 2
+export const BACKUP_VERSION = 3
 
 const suma = (arr, f = (x) => x) => arr.reduce((s, x) => s + (Number(f(x)) || 0), 0)
 
@@ -81,6 +86,26 @@ export const CANALES = [
 
 export const CATEGORIAS = ['Remeras y tops', 'Vestidos', 'Pantalones', 'Faldas', 'Abrigos', 'Accesorios']
 export const CATEGORIAS_GASTO = ['Mercadería', 'Alquiler', 'Servicios', 'Envíos', 'Publicidad', 'Sueldos', 'Otros']
+/** Motivos de devolución / cambio / anulación (para saber por qué vuelve la ropa). */
+export const MOTIVOS_DEVOLUCION = [
+  { id: 'talle', label: 'No le quedó el talle' },
+  { id: 'gusto', label: 'No le gustó / se arrepintió' },
+  { id: 'falla', label: 'Falla o defecto' },
+  { id: 'error', label: 'Error al cobrar' },
+  { id: 'otro', label: 'Otro' },
+]
+export const MOTIVO_DEV_LABEL = Object.fromEntries(MOTIVOS_DEVOLUCION.map((m) => [m.id, m.label]))
+
+/** Motivos de ajuste de stock. */
+export const MOTIVOS_AJUSTE = [
+  { id: 'falla', label: 'Falla / rota', signo: -1 },
+  { id: 'perdida', label: 'Robo / pérdida', signo: -1 },
+  { id: 'uso', label: 'Uso personal / regalo', signo: -1 },
+  { id: 'conteo', label: 'Corrección por conteo', signo: 0 },
+  { id: 'otro', label: 'Otro', signo: 0 },
+]
+export const MOTIVO_AJUSTE_LABEL = { ...Object.fromEntries(MOTIVOS_AJUSTE.map((m) => [m.id, m.label])), edicion: 'Editado en la ficha', proveedor: 'Devuelto al proveedor' }
+
 export const TALLES_SUGERIDOS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Único', '36', '38', '40', '42', '44']
 
 export const CONFIG_DEFAULT = {
@@ -227,7 +252,7 @@ export async function registrarVenta(v, opts = {}) {
     if (opts.cambio) {
       const orig = await db.ventas.get(opts.cambio.ventaId)
       if (!orig || orig.anulada) throw new Error('La venta original del cambio ya no está disponible.')
-      cambio = await aplicarDevolucion(orig, opts.cambio.lineas, fecha, { tipo: 'cambio' })
+      cambio = await aplicarDevolucion(orig, opts.cambio.lineas, fecha, { tipo: 'cambio', motivo: opts.cambio.motivo || null })
       const usado = suma(pagos.filter((p) => p.metodo === 'cambio'), (p) => p.monto)
       if (usado > cambio.resto) throw new Error('El crédito del cambio es menor a lo que se quiere usar.')
       const excedente = cambio.resto - usado
@@ -279,14 +304,14 @@ export async function registrarVenta(v, opts = {}) {
 }
 
 /** Devolución parcial: vuelven al stock las prendas elegidas. Primero baja lo que debía; lo ya pagado va según `destino`. */
-export async function devolverItems(ventaId, lineas, destino) {
+export async function devolverItems(ventaId, lineas, destino, motivo = null) {
   return db.transaction('rw', TX_VENTA.map((t) => db.table(t)), async () => {
     const v = await db.ventas.get(ventaId)
     if (!v || v.anulada) throw new Error('Esta venta ya no admite devoluciones.')
     const fecha = Date.now()
     const dev = calcDevolucion(v, lineas)
     if (dev.resto > 0) chequearDestino(destino, v.clientaId)
-    const r = await aplicarDevolucion(v, lineas, fecha, { tipo: 'devolucion' })
+    const r = await aplicarDevolucion(v, lineas, fecha, { tipo: 'devolucion', motivo })
     await destinarResto(r.resto, destino, { fecha, ventaId, clientaId: v.clientaId, devolucionId: r.devolucionId })
     if (r.completa) await db.ventas.update(ventaId, { estado: 'devuelta' })
     return r
@@ -297,7 +322,7 @@ export async function devolverItems(ventaId, lineas, destino) {
  * Anular = devolver todo lo que queda. Los cobros originales NO se tocan (los días pasados y sus cierres
  * quedan como estaban): lo pagado vuelve hoy como reintegro o queda como saldo a favor.
  */
-export async function anularVenta(id, destino = { tipo: 'reintegro', metodo: 'efectivo' }) {
+export async function anularVenta(id, destino = { tipo: 'reintegro', metodo: 'efectivo' }, motivo = null) {
   return db.transaction('rw', TX_VENTA.map((t) => db.table(t)), async () => {
     const v = await db.ventas.get(id)
     if (!v || v.anulada) return null
@@ -307,10 +332,10 @@ export async function anularVenta(id, destino = { tipo: 'reintegro', metodo: 'ef
     if (lineas.length) {
       const dev = calcDevolucion(v, lineas)
       if (dev.resto > 0) chequearDestino(destino, v.clientaId)
-      r = await aplicarDevolucion(v, lineas, fecha, { tipo: 'anulacion' })
+      r = await aplicarDevolucion(v, lineas, fecha, { tipo: 'anulacion', motivo })
       await destinarResto(r.resto, destino, { fecha, ventaId: id, clientaId: v.clientaId, devolucionId: r.devolucionId })
     }
-    await db.ventas.update(id, { anulada: 1, porDevolucion: true, estado: 'anulada', saldo: 0, anuladaEl: fecha })
+    await db.ventas.update(id, { anulada: 1, porDevolucion: true, estado: 'anulada', saldo: 0, anuladaEl: fecha, motivoAnulacion: motivo })
     return r
   })
 }
@@ -426,6 +451,50 @@ export async function registrarIngreso({ proveedor = '', items, gastoMetodo = nu
   })
 }
 
+/**
+ * Cancela un ingreso de mercadería (devolución al proveedor o carga equivocada):
+ * saca del stock lo que había entrado y borra el gasto que se anotó.
+ */
+export async function anularIngreso(id) {
+  return db.transaction('rw', db.variantes, db.gastos, db.ingresos, async () => {
+    const ing = await db.ingresos.get(id)
+    if (!ing || ing.anulado) throw new Error('Este ingreso ya estaba cancelado.')
+    for (const it of ing.items) {
+      const varr = await db.variantes.get(it.varianteId)
+      if (!varr) continue
+      if (varr.stock < it.cantidad) throw new Error(`De ${it.nombre} (${it.talle}) quedan ${varr.stock} y entraron ${it.cantidad}: ya se vendieron. Ajustá el stock a mano.`)
+    }
+    for (const it of ing.items) {
+      const varr = await db.variantes.get(it.varianteId)
+      if (varr) await db.variantes.update(varr.id, { stock: varr.stock - it.cantidad })
+    }
+    if (ing.gastoId) await db.gastos.delete(ing.gastoId)
+    await db.ingresos.update(id, { anulado: Date.now() })
+  })
+}
+
+/**
+ * Ajuste de stock con motivo (falla, pérdida, conteo…). items: [{ varianteId, delta }] (delta puede ser negativo).
+ * Queda registrado con el costo para saber cuánta mercadería se pierde.
+ */
+export async function ajustarStock({ items, motivo, nota = '' }) {
+  const lineas = items.filter((i) => Number(i.delta))
+  if (!lineas.length) throw new Error('Indicá cuántas unidades cambian.')
+  if (!motivo) throw new Error('Elegí el motivo del ajuste.')
+  return db.transaction('rw', db.variantes, db.productos, db.ajustes, async () => {
+    const fecha = Date.now()
+    for (const it of lineas) {
+      const varr = await db.variantes.get(it.varianteId)
+      if (!varr) throw new Error('Una de las prendas ya no existe.')
+      const nuevo = varr.stock + Number(it.delta)
+      const prod = await db.productos.get(varr.productoId)
+      if (nuevo < 0) throw new Error(`De ${prod?.nombre || 'la prenda'} (${varr.talle}) hay ${varr.stock}: no se pueden sacar ${-it.delta}.`)
+      await db.variantes.update(varr.id, { stock: nuevo })
+      await db.ajustes.add({ fecha, productoId: varr.productoId, varianteId: varr.id, nombre: prod?.nombre || '', talle: varr.talle, color: varr.color, delta: Number(it.delta), costo: prod?.costo || 0, motivo, nota: nota.trim() })
+    }
+  })
+}
+
 export function nuevoPrecio(precio, pct, redondeo = 0) {
   const p = precio * (1 + pct / 100)
   return Math.max(0, redondeo > 0 ? Math.round(p / redondeo) * redondeo : Math.round(p))
@@ -465,7 +534,7 @@ export async function setFondo(dia, monto) { await db.fondos.put({ dia, monto: N
 
 /* ---------- Backup ---------- */
 
-export const TABLAS = ['productos', 'variantes', 'clientas', 'ventas', 'cobros', 'gastos', 'cierres', 'config', 'creditos', 'devoluciones', 'fondos', 'ingresos']
+export const TABLAS = ['productos', 'variantes', 'clientas', 'ventas', 'cobros', 'gastos', 'cierres', 'config', 'creditos', 'devoluciones', 'fondos', 'ingresos', 'ajustes', 'esperas']
 
 export async function exportarBackup() {
   const data = { app: 'autenticas', version: BACKUP_VERSION, exportado: new Date().toISOString(), tablas: {} }
@@ -486,6 +555,8 @@ export function validarBackup(data) {
 export async function importarBackup(data) {
   const version = validarBackup(data)
   const tablas = version < 2 ? migrarTablasV1(data.tablas) : { ...data.tablas }
+  tablas.ajustes ||= []
+  tablas.esperas ||= []
   tablas.productos = (tablas.productos || []).map((p) => ({ ...p, foto: fotoABlob(p.foto) }))
   await db.transaction('rw', TABLAS.map((t) => db.table(t)), async () => {
     for (const t of TABLAS) {

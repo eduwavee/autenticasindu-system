@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, METODO_LABEL, CANALES } from '../db'
+import { db, METODO_LABEL, CANALES, MOTIVO_AJUSTE_LABEL } from '../db'
 import { useConfig } from '../store'
 import { useAhora } from '../hooks'
 import { Page } from '../layout'
@@ -102,9 +102,21 @@ export default function Reportes() {
   const ant = periodoAnterior(p)
 
   const data = useLiveQuery(async () => {
-    const [actual, previo] = await Promise.all([leerPeriodo(p.desde, p.hasta), leerPeriodo(ant.desde, ant.hasta)])
-    return { actual, previo }
+    const [actual, previo, ajustes] = await Promise.all([
+      leerPeriodo(p.desde, p.hasta), leerPeriodo(ant.desde, ant.hasta),
+      db.ajustes.where('fecha').between(p.desde, p.hasta, true, true).toArray(),
+    ])
+    return { actual, previo, ajustes }
   }, [p.desde, p.hasta, ant.desde, ant.hasta])
+
+  // Mercadería que salió del stock sin venderse (fallas, pérdidas, uso), valuada a costo.
+  const perdida = useMemo(() => {
+    if (!data) return null
+    const neg = data.ajustes.filter((a) => a.delta < 0)
+    const por = {}
+    neg.forEach((a) => { const k = MOTIVO_AJUSTE_LABEL[a.motivo] || a.motivo; por[k] = (por[k] || 0) + -a.delta * (a.costo || 0) })
+    return { unidades: neg.reduce((s, a) => s - a.delta, 0), costo: neg.reduce((s, a) => s - a.delta * (a.costo || 0), 0), por: Object.entries(por).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ k, v })) }
+  }, [data])
 
   const quietas = useLiveQuery(async () => {
     const [productos, variantes, ventas] = await Promise.all([db.productos.toArray(), db.variantes.toArray(), db.ventas.toArray()])
@@ -186,7 +198,7 @@ export default function Reportes() {
               <div className="kpi"><div className="k">Ganancia bruta</div><div className="v">{money(r.bruta)}</div><div className="d">margen {r.margen}% · costo {money(r.cmv)}</div></div>
               <div className="kpi"><div className="k">Gastos</div><div className="v">{money(r.gastado)}</div><div className="d">cobrado {money(r.cobrado)} <Delta actual={r.gastado} antes={r.prev.gastado} invert /></div></div>
             </div>
-            <p className="subtle">Comparado con {ant.label}: vendiste {money(r.prev.vendido)} en {r.prev.cant} ventas.{r.devuelto > 0 ? ` Ya están descontadas devoluciones por ${money(r.devuelto)}.` : ''}</p>
+            <p className="subtle">Comparado con {ant.label}: vendiste {money(r.prev.vendido)} en {r.prev.cant} ventas.{r.devuelto > 0 ? <> Ya están descontadas <Link to="/ventas/devoluciones">devoluciones por {money(r.devuelto)}</Link>.</> : ''}</p>
 
             {r.cant === 0 && r.devuelto === 0 ? <Empty title="Sin ventas en este período" text="Cuando registres ventas, acá vas a ver cuánto ganaste y qué se vende más." /> : (
               <>
@@ -204,6 +216,14 @@ export default function Reportes() {
               </>
             )}
           </>
+        )}
+
+        {perdida && perdida.unidades > 0 && (
+          <section className="panel panel-pad stack">
+            <div className="section-head"><h2 className="section-title">Mercadería que salió sin venderse</h2><Link to="/stock/ajuste">Ver ajustes</Link></div>
+            <p className="subtle">{perdida.unidades} {perdida.unidades === 1 ? 'prenda' : 'prendas'} en el período, {money(perdida.costo)} a costo.</p>
+            <HBars rows={perdida.por} />
+          </section>
         )}
 
         <section className="panel panel-pad stack">

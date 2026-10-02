@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Search, Plus, X, PackagePlus } from 'lucide-react'
-import { db, METODOS, registrarIngreso } from '../db'
+import { Search, Plus, X, PackagePlus, Undo2 } from 'lucide-react'
+import { db, METODOS, registrarIngreso, anularIngreso } from '../db'
 import { Page } from '../layout'
-import { MoneyInput, ProductImg, useToast } from '../ui'
+import { Confirm, MoneyInput, ProductImg, useToast } from '../ui'
 import { money, colorHex, fechaRelativa } from '../utils'
 
 /** Entró mercadería: suma stock por talle/color, actualiza el costo y anota el gasto, todo de una. */
@@ -22,6 +22,7 @@ export default function Ingreso() {
   const [anotarGasto, setAnotarGasto] = useState(true)
   const [metodo, setMetodo] = useState('transferencia')
   const [busy, setBusy] = useState(false)
+  const [cancelar, setCancelar] = useState(null)
 
   const prodMap = useMemo(() => Object.fromEntries((data?.productos || []).map((p) => [p.id, p])), [data])
   const t = q.trim().toLowerCase()
@@ -122,12 +123,13 @@ export default function Ingreso() {
             {data.ingresos.length ? (
               <div className="list">
                 {data.ingresos.map((i) => (
-                  <div key={i.id} className="list-item">
+                  <div key={i.id} className="list-item" style={i.anulado ? { opacity: 0.6 } : undefined}>
                     <span className="grow" style={{ minWidth: 0 }}>
-                      <span className="title">{i.proveedor || 'Ingreso de mercadería'}</span><br />
+                      <span className="title">{i.proveedor || 'Ingreso de mercadería'}</span>{i.anulado && <> <span className="badge badge-muted">cancelado</span></>}<br />
                       <span className="subtle">{fechaRelativa(i.fecha)} · {i.items.reduce((s, x) => s + x.cantidad, 0)} prendas{i.gastoId ? '' : ' · sin gasto anotado'}</span>
                     </span>
-                    <b className="money">{money(i.total)}</b>
+                    <b className="money" style={i.anulado ? { textDecoration: 'line-through' } : undefined}>{money(i.total)}</b>
+                    {!i.anulado && <button className="icon-btn" onClick={() => setCancelar(i)} aria-label="Cancelar este ingreso" title="Devolver al proveedor / cancelar"><Undo2 /></button>}
                   </div>
                 ))}
               </div>
@@ -135,6 +137,9 @@ export default function Ingreso() {
           </section>
         )}
       </div>
+      <Confirm open={!!cancelar} onClose={() => setCancelar(null)} danger title="¿Cancelar este ingreso?" confirmLabel="Cancelar ingreso"
+        text={cancelar ? `Para una compra devuelta al proveedor o cargada por error: salen del stock las ${cancelar.items.reduce((s, x) => s + x.cantidad, 0)} prendas que entraron${cancelar.gastoId ? ` y se borra el gasto de ${money(cancelar.total)}` : ''}.` : ''}
+        onConfirm={async () => { await anularIngreso(cancelar.id); toast('Ingreso cancelado') }} />
     </Page>
   )
 }

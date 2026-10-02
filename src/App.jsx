@@ -12,20 +12,23 @@ import VentaDetalle from './pages/VentaDetalle'
 import Ventas from './pages/Ventas'
 import Stock from './pages/Stock'
 import ProductoForm from './pages/ProductoForm'
-import Precios from './pages/Precios'
-import Ingreso from './pages/Ingreso'
 import Clientas from './pages/Clientas'
 import ClientaDetalle from './pages/ClientaDetalle'
 import Mas from './pages/Mas'
-import Reportes from './pages/Reportes'
 import Caja from './pages/Caja'
-import Catalogo from './pages/Catalogo'
 import Ajustes from './pages/Ajustes'
 import Onboarding from './pages/Onboarding'
 import Bloqueo from './pages/Bloqueo'
 
-// La librería de QR solo hace falta para imprimir etiquetas: se carga cuando se entra ahí.
+// Pantallas que no se usan en el mostrador: se cargan cuando se entra (la de etiquetas trae la librería de QR).
+// El service worker las guarda igual para usar sin internet.
 const Etiquetas = lazy(() => import('./pages/Etiquetas'))
+const Precios = lazy(() => import('./pages/Precios'))
+const Ingreso = lazy(() => import('./pages/Ingreso'))
+const Ajuste = lazy(() => import('./pages/Ajuste'))
+const Reportes = lazy(() => import('./pages/Reportes'))
+const Catalogo = lazy(() => import('./pages/Catalogo'))
+const Devoluciones = lazy(() => import('./pages/Devoluciones'))
 
 /** Minutos en segundo plano después de los cuales se vuelve a pedir el PIN. */
 const RELOCK_MIN = 5
@@ -57,21 +60,25 @@ function Routed() {
   if (!cfg) return null
   if (!cfg.onboarded) return <Onboarding />
   if (bloqueada) return <Bloqueo cfg={cfg} onUnlock={desbloquear} />
+  // Al cambiar la configuración se vuelve a dibujar todo el árbol, así los montos se ocultan / muestran
+  // sin desmontar las pantallas (no se pierde lo que se estaba cargando).
   setDiscreto(cfg.discreto)
   return (
-    // La key fuerza a redibujar todos los montos cuando se activa / desactiva el modo discreto.
-    <Shell key={cfg.discreto ? 'discreto' : 'normal'}>
+    <Shell>
+      <Suspense fallback={null}>
       <Routes>
         <Route path="/" element={<Inicio />} />
         <Route path="/vender" element={<Vender />} />
         <Route path="/vender/cobrar" element={<Cobrar />} />
         <Route path="/ventas" element={<Ventas />} />
+        <Route path="/ventas/devoluciones" element={<Devoluciones />} />
         <Route path="/ventas/:id" element={<VentaDetalle />} />
         <Route path="/stock" element={<Stock />} />
         <Route path="/stock/nuevo" element={<ProductoForm />} />
         <Route path="/stock/precios" element={<Precios />} />
         <Route path="/stock/ingreso" element={<Ingreso />} />
-        <Route path="/stock/etiquetas" element={<Suspense fallback={null}><Etiquetas /></Suspense>} />
+        <Route path="/stock/ajuste" element={<Ajuste />} />
+        <Route path="/stock/etiquetas" element={<Etiquetas />} />
         <Route path="/stock/:id" element={<ProductoForm />} />
         <Route path="/clientas" element={<Clientas />} />
         <Route path="/clientas/:id" element={<ClientaDetalle />} />
@@ -82,6 +89,7 @@ function Routed() {
         <Route path="/ajustes" element={<Ajustes />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </Shell>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Camera, Plus, Trash2, EyeOff, Eye, X, QrCode } from 'lucide-react'
+import { Camera, Plus, Trash2, EyeOff, Eye, X, QrCode, ClipboardCheck } from 'lucide-react'
 import { db, CATEGORIAS, TALLES_SUGERIDOS } from '../db'
 import { useFotoUrl } from '../hooks'
 import { Page } from '../layout'
@@ -68,7 +68,7 @@ export default function ProductoForm() {
     if (Object.keys(e).length) return
 
     const data = { nombre: p.nombre.trim(), categoria: p.categoria, precio: Number(p.precio), costo: Number(p.costo) || 0, descripcion: p.descripcion || '', foto: p.foto || null, activo: p.activo ?? 1 }
-    await db.transaction('rw', db.productos, db.variantes, async () => {
+    await db.transaction('rw', db.productos, db.variantes, db.ajustes, async () => {
       let pid = Number(id)
       if (editando) await db.productos.update(pid, data)
       else pid = await db.productos.add({ ...data, creado: Date.now() })
@@ -80,7 +80,11 @@ export default function ProductoForm() {
           vivas.add(k)
           const ex = existentes.find((v) => key(v.color || '', v.talle) === k)
           const s = Math.max(0, Number(stock[k]) || 0)
-          if (ex) await db.variantes.update(ex.id, { stock: s })
+          if (ex) {
+            await db.variantes.update(ex.id, { stock: s })
+            // Cambiar el número a mano queda registrado como ajuste, para no perder el rastro.
+            if (s !== ex.stock) await db.ajustes.add({ fecha: Date.now(), productoId: pid, varianteId: ex.id, nombre: data.nombre, talle: t, color: c, delta: s - ex.stock, costo: data.costo, motivo: 'edicion', nota: '' })
+          }
           else await db.variantes.add({ productoId: pid, talle: t, color: c, stock: s })
         }
       }
@@ -202,7 +206,12 @@ export default function ProductoForm() {
               <button className="btn btn-danger" onClick={() => setConfirmDel(true)}><Trash2 /> Eliminar</button>
             </div>
           )}
-          {editando && <Link className="btn btn-ghost" to={`/stock/etiquetas?p=${id}`}><QrCode /> Imprimir etiquetas</Link>}
+          {editando && (
+            <div className="grid-2">
+              <Link className="btn btn-ghost" to={`/stock/ajuste?p=${id}`}><ClipboardCheck /> Ajustar stock</Link>
+              <Link className="btn btn-ghost" to={`/stock/etiquetas?p=${id}`}><QrCode /> Etiquetas</Link>
+            </div>
+          )}
           {editando && p.activo === 0 && <p className="subtle">Oculta: no aparece al vender ni en el catálogo. Guardá para aplicar.</p>}
         </div>
       </div>

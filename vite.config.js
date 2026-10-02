@@ -4,6 +4,19 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: './',
+  build: {
+    rolldownOptions: {
+      output: {
+        // Las librerías van en archivos aparte: cambian poco, así una actualización de la app baja solo el código propio.
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/ },
+            { name: 'vendor', test: /node_modules[\\/](?!qrcode|dijkstrajs)/ },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

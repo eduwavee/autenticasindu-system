@@ -7,7 +7,7 @@ import { useCart, useConfig } from '../store'
 import { Page } from '../layout'
 import { Tag, Sheet, MoneyInput, useToast } from '../ui'
 import { money, initials } from '../utils'
-import { CartLines, CambioBanner } from './Vender'
+import { CartLines, CambioBanner, CartTools } from './Vender'
 
 const PAY = [
   { id: 'efectivo', label: 'Efectivo', icon: Banknote },
@@ -124,10 +124,13 @@ export default function Cobrar() {
     setBusy(true)
     try {
       const id = await registrarVenta({
-        items: cart.items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId, nombre: i.nombre, talle: i.talle, color: i.color, precio: i.precio, costo: i.costo, categoria: i.categoria, cantidad: i.cantidad })),
+        items: cart.items.map((i) => ({
+          productoId: i.productoId, varianteId: i.varianteId, nombre: i.nombre, talle: i.talle, color: i.color, precio: i.precio, costo: i.costo, categoria: i.categoria, cantidad: i.cantidad,
+          ...(i.precioLista !== undefined && i.precioLista !== i.precio ? { precioLista: i.precioLista } : {}), ...(i.libre ? { libre: true } : {}),
+        })),
         subtotal, descuento, recargo: recargoMonto, total,
         pagos: pagosFinal, clientaId: clienta?.id || null, canal, nota: nota.trim(), entregada,
-      }, cambio ? { cambio: { ventaId: cambio.ventaId, lineas: cambio.lineas, excedente: destinoExcedente } } : {})
+      }, cambio ? { cambio: { ventaId: cambio.ventaId, lineas: cambio.lineas, excedente: destinoExcedente, motivo: cambio.motivo || null } } : {})
       cart.clear()
       toast(cambio ? 'Cambio registrado' : 'Venta registrada')
       nav(`/ventas/${id}?nueva=1`, { replace: true })
@@ -148,6 +151,7 @@ export default function Cobrar() {
           <div className="stack">
             <div className="row-between"><h2 className="section-title">Prendas</h2><Link to="/vender" className="link-btn">+ Agregar más</Link></div>
             <CartLines />
+            <CartTools despues={() => nav('/vender', { replace: true })} />
           </div>
         </Tag>
 

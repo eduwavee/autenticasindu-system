@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { HandCoins, MinusCircle, Store, Wallet, ChevronRight, DatabaseBackup, Cake, PackagePlus } from 'lucide-react'
+import { HandCoins, MinusCircle, Wallet, ChevronRight, DatabaseBackup, Cake, PackagePlus, Store } from 'lucide-react'
 import { db, METODO_LABEL, deudaPorClienta } from '../db'
 import { useConfig } from '../store'
 import { useHoy, useAhora } from '../hooks'
 import { Page } from '../layout'
 import { Tag } from '../ui'
+import { EsperasBar } from './Vender'
 import { money, fechaLarga, hora, initials, diasParaCumple, DIA } from '../utils'
 
 const SPLIT_COLORS = { efectivo: '#ffffff', transferencia: '#f8cfe0', debito: '#f3a6c6', credito: '#dd4d88' }
@@ -112,6 +113,8 @@ export default function Inicio() {
             <span className="subtle">ver caja</span>
           </Link>
         </div>
+
+        <EsperasBar />
 
         {data.cumples.length > 0 && (
           <Link to="/clientas?filtro=cumple" className="alert alert-rose" style={{ textDecoration: 'none' }}>

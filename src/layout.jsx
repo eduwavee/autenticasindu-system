@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Home, ShoppingBag, Shirt, Users, LayoutGrid, Receipt, BarChart3, Wallet, Store, Settings, Eye, EyeOff, PackagePlus } from 'lucide-react'
 import { setConfig } from './db'
-import { useConfig } from './store'
+import { useCart, useConfig } from './store'
 
 export function Wordmark({ small }) {
   return <span className="wordmark">Auténticas{small && <small>gestión</small>}</span>
@@ -11,11 +11,13 @@ const navCls = ({ isActive }) => `navlink ${isActive ? 'active' : ''}`
 const railCls = ({ isActive }) => `rail-link ${isActive ? 'active' : ''}`
 
 export function Shell({ children }) {
+  const cart = useCart()
+  const enCarrito = cart?.count || 0
   return (
     <div className="shell">
       <aside className="siderail" aria-label="Navegación principal">
         <Wordmark />
-        <NavLink to="/vender" className="rail-link rail-sell"><ShoppingBag /> Nueva venta</NavLink>
+        <NavLink to="/vender" className="rail-link rail-sell"><ShoppingBag /> Nueva venta{enCarrito > 0 && <span className="nav-badge num" aria-label={`${enCarrito} en el carrito`}>{enCarrito}</span>}</NavLink>
         <NavLink to="/" end className={railCls}><Home /> Inicio</NavLink>
         <NavLink to="/ventas" className={railCls}><Receipt /> Ventas</NavLink>
         <NavLink to="/stock" end className={railCls}><Shirt /> Stock</NavLink>
@@ -32,7 +34,7 @@ export function Shell({ children }) {
         <NavLink to="/" end className={navCls}><Home />Inicio</NavLink>
         <NavLink to="/stock" className={navCls}><Shirt />Stock</NavLink>
         <NavLink to="/vender" className={({ isActive }) => `navlink sell ${isActive ? 'active' : ''}`} aria-label="Vender">
-          <span className="sell-disc"><ShoppingBag /></span>Vender
+          <span className="sell-disc"><ShoppingBag />{enCarrito > 0 && <span className="nav-badge num" aria-label={`${enCarrito} en el carrito`}>{enCarrito}</span>}</span>Vender
         </NavLink>
         <NavLink to="/clientas" className={navCls}><Users />Clientas</NavLink>
         <NavLink to="/mas" className={navCls}><LayoutGrid />Más</NavLink>

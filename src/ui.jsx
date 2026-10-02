@@ -93,15 +93,19 @@ export function ProductImg({ producto }) {
 /* ---------- Hoja inferior ---------- */
 export function Sheet({ open, onClose, title, children, labelledBy }) {
   const ref = useRef(null)
+  // onClose suele ser una función nueva en cada render: se lee de un ref para que el efecto
+  // corra solo al abrir (si no, cada tecla devolvía el foco al primer campo).
+  const cerrar = useRef(onClose)
+  useEffect(() => { cerrar.current = onClose }, [onClose])
   useEffect(() => {
     if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
+    const onKey = (e) => { if (e.key === 'Escape') cerrar.current?.() }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     ref.current?.querySelector('input, select, textarea, button:not(.icon-btn)')?.focus({ preventScroll: true })
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
-  }, [open, onClose])
+  }, [open])
   if (!open) return null
   return (
     <div className="sheet-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}>
