@@ -8,6 +8,9 @@ export const puedeEscanear = () => typeof window !== 'undefined' && 'BarcodeDete
 export default function Escaner({ onDetect, onClose }) {
   const video = useRef(null)
   const [error, setError] = useState('')
+  // La cámara se abre una sola vez; el callback se lee de un ref para no reiniciarla si cambia.
+  const detectar = useRef(onDetect)
+  useEffect(() => { detectar.current = onDetect }, [onDetect])
 
   useEffect(() => {
     let stream, timer, vivo = true
@@ -22,7 +25,7 @@ export default function Escaner({ onDetect, onClose }) {
           if (!vivo) return
           try {
             const [c] = await det.detect(video.current)
-            if (c?.rawValue) { onDetect(c.rawValue); return }
+            if (c?.rawValue) { detectar.current(c.rawValue); return }
           } catch { /* cuadro sin imagen todavía */ }
           timer = setTimeout(leer, 250)
         }
@@ -32,7 +35,7 @@ export default function Escaner({ onDetect, onClose }) {
       }
     })()
     return () => { vivo = false; clearTimeout(timer); stream?.getTracks().forEach((t) => t.stop()) }
-  }, [onDetect])
+  }, [])
 
   return (
     <Sheet open onClose={onClose} title="Escanear etiqueta">
